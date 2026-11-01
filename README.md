@@ -30,6 +30,12 @@ Validação feita num único equipamento. Isto não garante compatibilidade com 
 
 Preservar integrações existentes, incluindo golmar_quvii ou xmeye. A integração cria um adaptador de vídeo apenas em loopback, com caminho aleatório. O vídeo é pedido quando um cliente o solicita.
 
+## Referências de contra-senha
+
+`12345678` e `1234` são referências de valores pré-definidos indicadas pela comunidade durante a preparação deste projeto. Não foi confirmado que sejam senhas de fábrica universais, nem que se apliquem a todos os modelos ou firmwares. Usar apenas a contra-senha conhecida e autorizada do próprio equipamento; não executar tentativas automáticas ou listas de senhas.
+
+A contra-senha de ligação G2Call e o PIN de abertura são campos distintos. Não assumir que estes valores servem para ambos. A integração não inclui senhas no código nem preenche uma contra-senha por defeito.
+
 ## Apple Casa
 
 Criar uma entrada HomeKit Bridge separada em modo accessory, incluindo apenas a entidade de câmara do Golmar. Emparelhar essa câmara na Casa. No Home Assistant 2026.10.4, a entidade de evento doorbell do mesmo dispositivo é associada à câmara.
