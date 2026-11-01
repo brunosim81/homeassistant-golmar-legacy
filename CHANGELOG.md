@@ -1,5 +1,9 @@
 # Histórico
 
+## 0.4.1, 2026-11-01
+
+- Ícone local de videoporteiro, branco sobre azul, em 256 e 512 pixels. Sem alterações ao protocolo ou às entidades.
+
 ## 0.4.0, 2026-11-01
 
 ### Adicionado

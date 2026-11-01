@@ -1,6 +1,6 @@
 # Golmar G2Call legacy para Home Assistant
 
-Integração local experimental, versão **0.4.0**, para **Golmar ART 7W G2+ V03, firmware 1.03, G2Call legacy**. Não é G2Call+ nem uma integração oficial Golmar, Apple ou Home Assistant.
+Integração local experimental, versão **0.4.1**, para **Golmar ART 7W G2+ V03, firmware 1.03, G2Call legacy**. Não é G2Call+ nem uma integração oficial Golmar, Apple ou Home Assistant.
 
 ## Validado num monitor real
 
