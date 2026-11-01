@@ -1,59 +1,71 @@
 # Golmar G2Call legacy para Home Assistant
 
-Integração experimental para Golmar ART 7W G2+ V03, firmware 1.03, com G2Call legacy. Não é uma integração G2Call+.
+Integração local experimental, versão **0.4.0**, para **Golmar ART 7W G2+ V03, firmware 1.03, G2Call legacy**. Não é G2Call+ nem uma integração oficial Golmar, Apple ou Home Assistant.
 
-## Estado comprovado
+## Validado num monitor real
 
-- Autenticação local na porta TCP 5801, OEM G0053, com IP e contra-senha do monitor.
-- Imagem e vídeo H.264, validados num monitor com resolução 352 × 288.
-- Vídeo na app Casa através do HomeKit Bridge do Home Assistant.
-- Evento de campainha simulado: aviso recebido num iPhone, com acesso ao vídeo.
+- Autenticação local por IP e contra-senha, TCP 5801, OEM G0053. O UID não é necessário no login LAN.
+- Vídeo H.264 na app Casa, com imagem em movimento em cerca de 5 a 6 segundos no teste observado. Resolução do equipamento testado: 352 × 288.
+- Toque físico da campainha: notificação da Casa recebida em menos de 5 segundos, com acesso ao vídeo. Depois de fechar a imagem, o menu do monitor continuou normal.
+- Uma abertura física confirmada pelo proprietário após uma única tentativa autorizada. Isto não comprova fiabilidade em todos os cenários ou equipamentos.
+- Botão de simulação de campainha, identificado como teste, sem contactar o monitor.
 
-Validação feita num único equipamento. Isto não garante compatibilidade com todos os modelos ou firmwares.
+Validação limitada a um equipamento. Tempos são observações desse teste, não garantias. A abertura tinha apresentado falhas intermitentes em versões anteriores.
 
-## Limites importantes
+## O que mudou
 
-- A deteção de campainha real ainda não está implementada. Não há avisos automáticos quando alguém toca fisicamente.
-- O botão Abrir porta é experimental e fica desativado por defeito. A abertura física não foi validada pelo projeto. Ativá-lo e usá-lo pode atuar a fechadura; não é um teste de ligação.
-- Não existe leitura da posição física da fechadura.
-- Não há áudio bidirecional nem áudio validado na câmara publicada.
-- A Casa apresenta avisos de campainha, não chamadas CallKit/FaceTime.
-- Não é uma integração oficial Golmar, Apple ou Home Assistant, nem uma integração incluída no catálogo HACS.
+A receção de campainha usa uma ligação autenticada que recebe eventos espontâneos `0x505`, canal 0, alarme 7. **Não envia GUARD/UNGUARD**: a subscrição antiga colocou o monitor em estado de chamada e foi removida. Na ligação de eventos só são permitidos HELLO, LOGIN e heartbeat. Ao parar, a ligação é fechada.
 
-## Instalação manual
+O vídeo partilha uma única sessão do monitor entre até quatro leitores, com filas limitadas. A sessão tem um limite de 45 segundos e fecha após cerca de 2 segundos sem leitores. As miniaturas usam a imagem em cache e não iniciam vídeo. O fim de uma sessão pode exigir reabrir a imagem; não é um serviço de gravação contínua.
+
+Durante um pedido explícito de abertura, a integração suspende as suas sessões de vídeo e eventos e retoma a receção no fim. Não repete automaticamente comandos de abertura.
+
+## Instalação e atualização manual
 
 1. Fazer uma cópia de segurança do Home Assistant.
-2. Copiar apenas `custom_components/golmar_legacy` para `config/custom_components/golmar_legacy`.
-3. Reiniciar o Home Assistant e adicionar Golmar G2Call legacy em Definições > Dispositivos e serviços.
-4. Indicar o IP atual e a contra-senha de ligação conhecida. O UID não é usado no login local. Não tentar listas de senhas nem repor o monitor.
-5. Começar pelo botão Testar ligação. Este faz apenas autenticação e não abre a porta.
+2. Copiar apenas `custom_components/golmar_legacy` deste repositório para `config/custom_components/golmar_legacy`.
+3. Reiniciar o HA. Numa instalação nova, adicionar **Golmar G2Call legacy** em Definições > Dispositivos e serviços e indicar o IP atual e a contra-senha conhecida.
+4. Começar por **Testar ligação**, que autentica sem abrir a porta. A integração também mantém a ligação de receção de eventos enquanto está carregada.
+5. O botão **Abrir porta** fica desativado por defeito no registo de entidades. Ativá-lo e usá-lo pode atuar fisicamente a fechadura.
 
-Preservar integrações existentes, incluindo golmar_quvii ou xmeye. A integração cria um adaptador de vídeo apenas em loopback, com caminho aleatório. O vídeo é pedido quando um cliente o solicita.
-
-## Referências de contra-senha
-
-`12345678` e `1234` são referências de valores pré-definidos indicadas pela comunidade durante a preparação deste projeto. Não foi confirmado que sejam senhas de fábrica universais, nem que se apliquem a todos os modelos ou firmwares. Usar apenas a contra-senha conhecida e autorizada do próprio equipamento; não executar tentativas automáticas ou listas de senhas.
-
-A contra-senha de ligação G2Call e o PIN de abertura são campos distintos. Não assumir que estes valores servem para ambos. A integração não inclui senhas no código nem preenche uma contra-senha por defeito.
+Preservar outras integrações, incluindo `golmar_quvii` ou `xmeye`. Não é necessário remover nem voltar a emparelhar pontes HomeKit para atualizar esta integração. O adaptador de vídeo escuta apenas em loopback, com caminho aleatório.
 
 ## Apple Casa
 
-Criar uma entrada HomeKit Bridge separada em modo accessory, incluindo apenas a entidade de câmara do Golmar. Emparelhar essa câmara na Casa. No Home Assistant 2026.10.4, a entidade de evento doorbell do mesmo dispositivo é associada à câmara.
+Criar uma entrada HomeKit Bridge separada em modo **accessory**, selecionando apenas a câmara Golmar. Emparelhar na Casa. No HA 2026.10.4, o evento `doorbell` do mesmo dispositivo é associado à câmara. Ativar as notificações da campainha nas definições dessa câmara na Casa.
 
-O botão Simular campainha (teste) emite um evento local marcado como simulado e pode produzir uma notificação real no iPhone. Não envia comandos ao monitor. A receção depende das definições de notificações e da configuração HomeKit de cada casa.
+Para o botão de abertura, uma segunda entrada HomeKit em modo **accessory**, incluindo apenas o botão **Abrir porta**, permite emparelhá-lo e escolher o nome e a divisão independentemente. Colocar câmara e abertura na mesma divisão. Se o botão já estiver numa ponte geral, excluí-lo apenas dessa ponte para evitar duplicados, preservando os restantes filtros e acessórios. Não publicar nem reutilizar códigos de emparelhamento de outra instalação.
 
-## Investigação pendente
+O botão aparece como controlo de ativação. Não é um sensor da posição da porta. Não o premir para testar a ligação ou a edição do nome.
 
-O protocolo contém StartGetAlarm/StopGetAlarm (mensagens GUARD/UNGUARD). Num ensaio limitado, o monitor aceitou ambas, mas não houve toque físico durante a captura. A correspondência entre os eventos locais e o toque real permanece por validar. Não ativamos subscrição automática nem assumimos ausência de efeitos persistentes no equipamento.
+No monitor testado, o desvio de chamada estava inicialmente em 15 segundos e o proprietário colocou-o em 0. Consultar esta opção se houver atraso, usando as definições oficiais do monitor. O teste final da campainha foi feito com 0 segundos. A app G2Call não recebia chamadas nesse equipamento, mas a receção local na Casa funcionou.
 
-Os valores de aplicação ring=7 e motion=2 são pistas de investigação, não uma prova dos valores recebidos localmente.
+## Limitações
 
-## Testes e contributos
+- Sem leitura da posição física da porta ou da fechadura.
+- Sem áudio bidirecional. O áudio da câmara também não foi validado.
+- A Casa apresenta notificações de campainha com vídeo, não chamadas de ecrã inteiro CallKit/FaceTime.
+- Outros modelos, canais, tipos de evento e firmwares não foram validados. Eventos desconhecidos são ignorados.
+- A ligação simultânea de outras apps pode afetar o monitor. Se o menu ficar bloqueado, fechar o vídeo e desativar apenas esta integração. Não voltar a ativar GUARD/UNGUARD.
+- Se uma abertura falhar depois do envio do comando, confirmar fisicamente o resultado antes de repetir.
+- Não incluída no catálogo HACS. Instalação manual.
 
-26 testes automatizados passaram na preparação original com bibliotecas de Home Assistant 2026.10.4/Python 3.14. Esses testes usam simuladores e não certificam ações físicas. Os testes estão incluídos; os endereços privados dos exemplos são fictícios.
+## Referências de contra-senha
 
-Contributos úteis: modelo e firmware, versão HA, confirmação de vídeo e capturas mínimas de um toque físico autorizado. Não publicar senhas, UID, tokens, QR HomeKit, cópias `.storage`, backups de telefone ou imagens de pessoas. Não expor portas do monitor à Internet.
+`12345678` e `1234` são referências de valores pré-definidos indicadas durante a preparação do projeto. Não foi confirmado que sejam senhas de fábrica universais. Usar apenas a contra-senha conhecida e autorizada do próprio equipamento, sem listas de tentativas ou reposição do monitor.
+
+A contra-senha G2Call e o PIN de abertura são campos distintos. A integração não inclui credenciais reais nem preenche uma contra-senha por defeito. O HA guarda a configuração através dos seus mecanismos normais; não partilhar `.storage`.
+
+## Testes e privacidade
+
+54 testes automatizados com HA 2026.10.4 e Python 3.14, usando servidores locais simulados. Não contactam um monitor real. Cobrem autenticação, framing TCP, rejeição de comandos na ligação de eventos, deduplicação, reconexão, encerramento, concorrência de vídeo e abertura explícita no simulador.
+
+Os endereços e senhas dos testes são fictícios. Não publicar UID, senhas, tokens, códigos ou QR HomeKit, capturas de rede, imagens privadas, backups do HA ou do telefone. Não expor portas do monitor à Internet. Este repositório contém apenas código, testes e documentação revistos.
+
+## Reverter
+
+Desativar apenas a integração Golmar no HA para fechar as sessões. Para remover, descarregar a entrada e remover apenas `custom_components/golmar_legacy`. Preservar outras integrações e pontes. Não instalar versões antigas que usem GUARD/UNGUARD neste modelo.
 
 ## Origem e licença
 
-MIT. Formato de mensagens adaptado de [jdntortosa/fermax-wayfi-ha](https://github.com/jdntortosa/fermax-wayfi-ha), commit `5f4a1dfeb44d6f925b29834f7927e11f3c546312`. Os avisos de licença originais estão preservados. Autenticação G0053 e transformação da contra-senha estudadas em ambiente próprio autorizado. Não são distribuídos APK, IPA, SDK ou binários de fabricantes.
+MIT. Formato de mensagens adaptado de [jdntortosa/fermax-wayfi-ha](https://github.com/jdntortosa/fermax-wayfi-ha), commit `5f4a1dfeb44d6f925b29834f7927e11f3c546312`. Avisos originais preservados. Autenticação G0053 e transformação da contra-senha estudadas em ambiente próprio autorizado. Não são distribuídos APK, IPA, SDK ou binários de fabricantes.

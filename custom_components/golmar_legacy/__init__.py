@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PASSWORD, Platform
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, Platform, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
@@ -26,13 +26,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.async_add_executor_job(runtime.start_media)
     try:
         await hass.config_entries.async_forward_entry_setups(entry,PLATFORMS)
+        await hass.async_add_executor_job(runtime.start_events,hass)
+        async def stop_runtime(_event):
+            await hass.async_add_executor_job(runtime.stop_all)
+        entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP,stop_runtime))
     except BaseException:
-        await hass.async_add_executor_job(runtime.stop_media)
+        await hass.async_add_executor_job(runtime.stop_all)
         raise
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded=await hass.config_entries.async_unload_platforms(entry,PLATFORMS)
-    if unloaded:await hass.async_add_executor_job(entry.runtime_data.stop_media)
+    if unloaded:
+        await hass.async_add_executor_job(entry.runtime_data.stop_all)
     return unloaded

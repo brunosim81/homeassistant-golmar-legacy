@@ -134,7 +134,10 @@ def open_door(host: str, port: int, password: str) -> None:
             _expect(_read(video),0x221)
             deadline = time.monotonic()+8.0
             while True:
-                frame = _read(video,maximum=2*1024*1024,deadline=deadline)
+                try:
+                    frame = _read(video,maximum=2*1024*1024,deadline=deadline)
+                except (OSError,ProtocolError) as err:
+                    raise ProtocolError('O monitor aceitou o vídeo mas não entregou uma imagem; não foi enviada abertura') from err
                 if struct.unpack_from('<H',frame,8)[0] == 0xe01 and frame[11] == 0 and len(frame)>20:
                     break
             # Allow the bus to settle as in the reference client, draining media.

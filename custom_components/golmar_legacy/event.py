@@ -1,7 +1,4 @@
-"""Doorbell event path. Real monitor event subscription is not enabled.
-
-Only an explicitly requested manual simulation currently triggers this entity.
-"""
+"""Doorbell events from the validated local ring and explicit test button."""
 from homeassistant.components.event import EventEntity, EventDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

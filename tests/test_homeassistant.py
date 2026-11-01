@@ -35,12 +35,12 @@ async def hass(tmp_path):
 
 
 def entry():
-    return ConfigEntry(domain='golmar_legacy',data={CONF_HOST:'192.168.50.20',CONF_PASSWORD:'test-fixture'},minor_version=1,version=1,options={},source='user',title='Golmar legacy',unique_id='192.168.50.20',discovery_keys=MappingProxyType({}),subentries_data=[])
+    return ConfigEntry(domain='golmar_legacy',data={CONF_HOST:'192.168.50.10',CONF_PASSWORD:'test-fixture'},minor_version=1,version=1,options={},source='user',title='Golmar legacy',unique_id='192.168.50.10',discovery_keys=MappingProxyType({}),subentries_data=[])
 
 
 async def test_config_flow_rejects_public_destination_without_network(hass):
     module=adapter('config_flow');flow=module.GolmarLegacyConfigFlow();flow.hass=hass
-    result=await flow.async_step_user({CONF_HOST:'8.8.8.8',CONF_PASSWORD:'2108'})
+    result=await flow.async_step_user({CONF_HOST:'8.8.8.8',CONF_PASSWORD:'1234'})
     assert result['type']=='form' and result['errors']=={'host':'invalid_host'}
 
 
@@ -50,7 +50,7 @@ async def test_connection_button_uses_real_read_only_login_and_door_is_disabled(
         with listener.accept()[0] as conn:
             handshake(conn);assert conn.recv(1)==b''
     with panel(serve) as port:
-        runtime=runtime_mod.GolmarRuntime('127.0.0.1',port,'2108')
+        runtime=runtime_mod.GolmarRuntime('127.0.0.1',port,'1234')
         e=entry();e.runtime_data=runtime
         created=[]
         await module.async_setup_entry(hass,e,created.extend)
@@ -67,7 +67,7 @@ async def test_connection_button_uses_real_read_only_login_and_door_is_disabled(
 
 
 async def test_busy_operation_cannot_queue_another_opening(hass):
-    runtime_mod=adapter('runtime');runtime=runtime_mod.GolmarRuntime('127.0.0.1',1,'2108')
+    runtime_mod=adapter('runtime');runtime=runtime_mod.GolmarRuntime('127.0.0.1',1,'1234')
     async with runtime.lock:
         with pytest.raises(HomeAssistantError,match='curso'):
             await runtime.async_open(hass)
@@ -90,10 +90,10 @@ async def test_config_flow_authenticates_without_device_commands(hass,monkeypatc
         # Redirect only the socket to loopback, keeping real config-flow and client code.
         monkeypatch.setattr(client.socket,'create_connection',lambda address,timeout:original_connect(('127.0.0.1',port),timeout))
         flow=module.GolmarLegacyConfigFlow();flow.hass=hass;flow.context={'source':'user'}
-        result=await flow.async_step_user({CONF_HOST:'192.168.50.20',CONF_PASSWORD:'2108'})
+        result=await flow.async_step_user({CONF_HOST:'192.168.50.10',CONF_PASSWORD:'1234'})
     assert result['type']==expected
     if status==0:
-        assert result['data']=={CONF_HOST:'192.168.50.20',CONF_PASSWORD:'2108'}
+        assert result['data']=={CONF_HOST:'192.168.50.10',CONF_PASSWORD:'1234'}
     else:
         assert result['errors']=={'base':'invalid_auth'}
 
@@ -101,7 +101,7 @@ async def test_config_flow_authenticates_without_device_commands(hass,monkeypatc
 async def test_cancelled_caller_keeps_opening_busy_until_executor_finishes(hass,monkeypatch):
     import asyncio
     import threading
-    module=adapter('runtime');runtime=module.GolmarRuntime('127.0.0.1',1,'2108')
+    module=adapter('runtime');runtime=module.GolmarRuntime('127.0.0.1',1,'1234')
     started=threading.Event();finish=threading.Event();calls=[]
     def simulated_open(*args):
         calls.append(1);started.set();finish.wait(timeout=3)
@@ -127,7 +127,7 @@ async def test_cancelled_caller_keeps_opening_busy_until_executor_finishes(hass,
 
 async def test_simulated_doorbell_event_is_labelled_and_never_opens(hass):
     import asyncio
-    module=adapter('event');runtime_mod=adapter('runtime');runtime=runtime_mod.GolmarRuntime('127.0.0.1',1,'2108')
+    module=adapter('event');runtime_mod=adapter('runtime');runtime=runtime_mod.GolmarRuntime('127.0.0.1',1,'1234')
     e=entry();e.runtime_data=runtime;entities=[]
     await module.async_setup_entry(hass,e,entities.extend)
     assert len(entities)==1
@@ -143,8 +143,97 @@ async def test_simulated_doorbell_event_is_labelled_and_never_opens(hass):
 
 
 async def test_camera_and_event_share_existing_device_identity(hass):
-    module=adapter('camera');events=adapter('event');runtime_mod=adapter('runtime');runtime=runtime_mod.GolmarRuntime('127.0.0.1',1,'2108');e=entry();e.runtime_data=runtime
+    module=adapter('camera');events=adapter('event');runtime_mod=adapter('runtime');runtime=runtime_mod.GolmarRuntime('127.0.0.1',1,'1234');e=entry();e.runtime_data=runtime
     camera=module.GolmarCamera(e);bell=events.GolmarDoorbell(e)
     assert camera.device_info['identifiers']==bell.device_info['identifiers']=={('golmar_legacy',e.unique_id)}
     assert camera.supported_features.value & 2
     assert bell.device_class.value=='doorbell'
+
+async def test_open_suspends_events_and_media_then_resumes_once_even_on_error(hass,monkeypatch):
+    from contextlib import contextmanager
+    m=adapter('runtime');runtime=m.GolmarRuntime('127.0.0.1',1,'fixture');calls=[]
+    class Events:
+        def stop(self):calls.append('events_stop')
+        def start(self):calls.append('events_start')
+    class Media:
+        @contextmanager
+        def exclusive(self):
+            calls.append('media_pause')
+            try:yield
+            finally:calls.append('media_resume')
+    def fail(*args):calls.append('one_open');raise m.ProtocolError('fixture error')
+    runtime._events=Events();runtime.video_proxy=Media();monkeypatch.setattr(m,'open_door',fail)
+    with pytest.raises(HomeAssistantError):await runtime.async_open(hass)
+    assert calls==['events_stop','media_pause','one_open','media_resume','events_start']
+
+async def test_opening_resumes_receive_only_listener(hass,monkeypatch):
+    m=adapter('runtime');runtime=m.GolmarRuntime('127.0.0.1',1,'fixture');calls=[]
+    class Events:
+        def stop(self):calls.append('stop')
+        def start(self):calls.append('resume_receive_only')
+    runtime._events=Events();monkeypatch.setattr(m,'open_door',lambda *args:calls.append('open'))
+    await runtime.async_open(hass)
+    assert calls==['stop','open','resume_receive_only']
+
+async def test_late_setup_and_open_cannot_restart_unloaded_runtime(hass,monkeypatch):
+    m=adapter('runtime');runtime=m.GolmarRuntime('127.0.0.1',1,'fixture');calls=[]
+    monkeypatch.setattr(m,'open_door',lambda *args:calls.append('open'))
+    runtime.stop_events();runtime.start_events(hass)
+    assert runtime._events is None
+    with pytest.raises(HomeAssistantError,match='terminar'):await runtime.async_open(hass)
+    assert calls==[]
+
+
+async def test_thumbnail_without_proxy_never_creates_connection(hass,monkeypatch):
+    module=adapter('runtime');runtime=module.GolmarRuntime('127.0.0.1',1,'fixture')
+    def forbidden(*args):pytest.fail('Thumbnail created an active connection')
+    monkeypatch.setattr(module,'snapshot',forbidden,raising=False)
+    assert await runtime.async_snapshot(hass) is None
+
+
+async def test_runtime_starts_receive_only_listener(hass,monkeypatch):
+    m=adapter('runtime');runtime=m.GolmarRuntime('127.0.0.1',1,'fixture');calls=[]
+    class SafeListener:
+        def __init__(self,*args):calls.append('create')
+        def start(self):calls.append('start')
+    monkeypatch.setattr(m,'BellListener',SafeListener)
+    runtime.start_events(hass)
+    assert calls==['create','start']
+
+
+async def test_receive_only_ring_delivered_on_ha_thread_and_ignored_after_unload(hass,monkeypatch):
+    import threading,asyncio
+    m=adapter('runtime');runtime=m.GolmarRuntime('127.0.0.1',1,'fixture');callbacks=[];calls=[]
+    class SafeListener:
+        def __init__(self,*args):callbacks.append(args[-1])
+        def start(self):pass
+        def stop(self):pass
+    monkeypatch.setattr(m,'BellListener',SafeListener)
+    runtime.start_events(hass);runtime.add_doorbell_listener(lambda data:calls.append((threading.get_ident(),data)))
+    worker=threading.Thread(target=lambda:callbacks[0]({'simulated':False,'alarm_type':7}));worker.start();worker.join()
+    await asyncio.sleep(0)
+    assert calls[0][0]==threading.get_ident() and calls[0][1]['simulated'] is False
+    runtime.stop_events();callbacks[0]({'simulated':False});await asyncio.sleep(0)
+    assert len(calls)==1
+
+
+async def test_receive_only_resume_cannot_race_with_unload(hass,monkeypatch):
+    import threading,asyncio
+    m=adapter('runtime');runtime=m.GolmarRuntime('127.0.0.1',1,'fixture')
+    entered=threading.Event();release=threading.Event()
+    class SafeListener:
+        running=False
+        def start(self):entered.set();release.wait(2);self.running=True
+        def stop(self):self.running=False
+    runtime._events=SafeListener();monkeypatch.setattr(m,'open_door',lambda *args:None)
+    job=asyncio.create_task(runtime.async_open(hass))
+    try:
+        for _ in range(100):
+            if entered.is_set():break
+            await asyncio.sleep(.01)
+        assert entered.is_set()
+        stop=hass.async_add_executor_job(runtime.stop_events)
+        await asyncio.sleep(.02);assert not stop.done()
+    finally:release.set()
+    await job;await stop
+    assert runtime._closing and not runtime._events.running
