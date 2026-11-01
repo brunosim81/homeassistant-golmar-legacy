@@ -1,0 +1,15 @@
+{
+  "domain": "golmar_legacy",
+  "name": "Golmar G2Call legacy",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/brunosim81/homeassistant-golmar-legacy",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "0.2.0",
+  "dependencies": [
+    "stream"
+  ],
+  "issue_tracker": "https://github.com/brunosim81/homeassistant-golmar-legacy/issues"
+}

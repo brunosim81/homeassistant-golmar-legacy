@@ -1,0 +1,47 @@
+{
+  "title": "Golmar G2Call legacy",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ligar ao Golmar legacy",
+        "description": "Teste apenas de autenticação local. Não abre a porta. A entidade de abertura fica desativada por defeito.",
+        "data": {
+          "host": "IP local do monitor",
+          "password": "Contra-senha G2Call"
+        }
+      }
+    },
+    "error": {
+      "invalid_host": "Indique um endereço IPv4 privado da rede local.",
+      "invalid_password": "Indique uma contra-senha válida, com 1 a 32 bytes.",
+      "invalid_auth": "O monitor recusou a contra-senha.",
+      "cannot_connect": "Não foi possível autenticar a ligação local ao monitor."
+    },
+    "abort": {
+      "already_configured": "Este monitor já está configurado."
+    }
+  },
+  "entity": {
+    "button": {
+      "test_connection": {
+        "name": "Testar ligação"
+      },
+      "open_door": {
+        "name": "Abrir porta"
+      },
+      "simulate_doorbell": {
+        "name": "Simular campainha (teste)"
+      }
+    },
+    "camera": {
+      "video": {
+        "name": "Vídeo"
+      }
+    },
+    "event": {
+      "doorbell": {
+        "name": "Campainha"
+      }
+    }
+  }
+}

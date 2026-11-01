@@ -1,0 +1,1 @@
+Integração experimental. Testada num monitor real: autenticação local, vídeo e notificação simulada na app Casa. A deteção do toque físico, a abertura física e o áudio bidirecional permanecem por validar. Não são distribuídos dados pessoais, capturas de rede ou binários de fabricantes.

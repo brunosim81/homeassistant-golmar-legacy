@@ -1,0 +1,47 @@
+{
+  "title": "Golmar G2Call legacy",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Golmar legacy",
+        "description": "Local authentication only; this does not open the door. The opening entity starts disabled.",
+        "data": {
+          "host": "Local monitor IP address",
+          "password": "G2Call device password"
+        }
+      }
+    },
+    "error": {
+      "invalid_host": "Enter a private IPv4 address on the local network.",
+      "invalid_password": "Enter a password of 1 to 32 bytes.",
+      "invalid_auth": "The monitor rejected the device password.",
+      "cannot_connect": "Could not authenticate with the local monitor."
+    },
+    "abort": {
+      "already_configured": "This monitor is already configured."
+    }
+  },
+  "entity": {
+    "button": {
+      "test_connection": {
+        "name": "Test connection"
+      },
+      "open_door": {
+        "name": "Open door"
+      },
+      "simulate_doorbell": {
+        "name": "Simulate doorbell (test)"
+      }
+    },
+    "camera": {
+      "video": {
+        "name": "Video"
+      }
+    },
+    "event": {
+      "doorbell": {
+        "name": "Doorbell"
+      }
+    }
+  }
+}
